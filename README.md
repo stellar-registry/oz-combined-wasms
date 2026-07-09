@@ -2,7 +2,7 @@
 
 Pre-built Soroban WASM files for every curated combination of
 [OpenZeppelin Stellar Contracts](https://github.com/OpenZeppelin/stellar-contracts),
-published to the [Stellar Registry](https://stellar-registry.io).
+published to the [Stellar Registry](https://rgstry.xyz).
 
 Instead of writing boilerplate, grab the combination you need directly from
 Registry and deploy it.

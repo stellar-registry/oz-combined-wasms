@@ -1,7 +1,6 @@
 [workspace]
 resolver = "2"
-# Note: generated/* crates are NOT workspace members — they are standalone
-# crates with explicit dependency versions written by the generator.
+members = ["generated/*"]
 
 [workspace.package]
 edition = "2021"

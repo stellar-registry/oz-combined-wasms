@@ -14,7 +14,7 @@ version.workspace = true
 
 [package.metadata.stellar]
 cargo_inherit = true
-homepage = "stellar-registry.io"
+homepage = "rgstry.xyz"
 repository = "https://github.com/stellar-registry/oz-combined-wasms/tree/main/generated/{name}"
 
 [lib]
