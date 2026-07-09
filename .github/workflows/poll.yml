@@ -34,8 +34,7 @@ jobs:
       - name: Read currently pinned version from Cargo.toml
         id: current
         run: |
-          VERSION=$(grep 'stellar-tokens' Cargo.toml \
-            | grep -oP '(?<=="=)[0-9]+\.[0-9]+\.[0-9]+')
+          VERSION=$(sed -n 's/.*stellar-tokens[^"]*"=\([0-9][0-9.]*\)".*/\1/p' Cargo.toml)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Dispatch update if version changed
