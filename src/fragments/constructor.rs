@@ -77,7 +77,7 @@ fn gen_fungible_constructor(cfg: &CombinationConfig, ft: FungibleType) -> String
         let mint_to = if cfg.is_ownable() { "owner" } else { "admin" };
         if cfg.has(Feature::Capped) {
             out.push_str(&format!(
-                "        if initial_supply > 0 {{\n            check_cap(e, initial_supply);\n            Base::mint(e, &{mint_to}, initial_supply);\n        }}\n"
+                "        if initial_supply > 0 {{\n            check_cap(e, initial_supply, Base::total_supply(e));\n            Base::mint(e, &{mint_to}, initial_supply);\n        }}\n"
             ));
         } else {
             out.push_str(&format!(
@@ -111,7 +111,7 @@ fn gen_fungible_mint(out: &mut String, cfg: &CombinationConfig, ft: FungibleType
         FungibleType::Votes => {
             out.push_str("    pub fn mint(e: &Env, to: &Address, amount: i128) {\n");
             if cfg.has(Feature::Capped) {
-                out.push_str("        check_cap(e, amount);\n");
+                out.push_str("        check_cap(e, amount, Base::total_supply(e));\n");
             }
             out.push_str("        FungibleVotes::mint(e, to, amount);\n");
             out.push_str("    }\n");
@@ -119,7 +119,7 @@ fn gen_fungible_mint(out: &mut String, cfg: &CombinationConfig, ft: FungibleType
         _ => {
             out.push_str("    pub fn mint(e: &Env, to: Address, amount: i128) {\n");
             if cfg.has(Feature::Capped) {
-                out.push_str("        check_cap(e, amount);\n");
+                out.push_str("        check_cap(e, amount, Base::total_supply(e));\n");
             }
             out.push_str("        Base::mint(e, &to, amount);\n");
             out.push_str("    }\n");

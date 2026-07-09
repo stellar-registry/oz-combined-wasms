@@ -38,9 +38,7 @@ fn gen_vault_default() -> String {
     out.push_str("    }\n");
     out.push_str("}\n\n");
 
-    out.push_str("#[contractimpl(contracttrait)]\n");
-    out.push_str("impl FungibleBurnable for Contract {}\n\n");
-
+    // Vault shares are redeemed via withdraw(), not burned directly
     out.push_str("#[contractimpl(contracttrait)]\n");
     out.push_str("impl FungibleVault for Contract {}\n\n");
 

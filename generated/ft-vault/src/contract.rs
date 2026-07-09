@@ -4,7 +4,7 @@ use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, MuxedAddress, St
 use stellar_access::ownable::{set_owner, Ownable};
 use stellar_contract_utils::upgradeable::{self as upgradeable, Upgradeable};
 use stellar_macros::{only_owner};
-use stellar_tokens::fungible::{burnable::FungibleBurnable, Base, FungibleToken};
+use stellar_tokens::fungible::{Base, FungibleToken};
 use stellar_tokens::vault::{FungibleVault, Vault};
 
 #[contract]
@@ -35,9 +35,6 @@ impl FungibleToken for Contract {
         Vault::decimals(e)
     }
 }
-
-#[contractimpl(contracttrait)]
-impl FungibleBurnable for Contract {}
 
 #[contractimpl(contracttrait)]
 impl FungibleVault for Contract {}

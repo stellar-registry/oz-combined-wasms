@@ -109,9 +109,7 @@ fn gen_fungible_imports(out: &mut String, cfg: &CombinationConfig, ft: FungibleT
             out.push_str("use stellar_governance::votes::Votes;\n");
         }
         FungibleType::Vault => {
-            out.push_str(
-                "use stellar_tokens::fungible::{burnable::FungibleBurnable, Base, FungibleToken};\n",
-            );
+            out.push_str("use stellar_tokens::fungible::{Base, FungibleToken};\n");
             out.push_str("use stellar_tokens::vault::{FungibleVault, Vault};\n");
         }
     }

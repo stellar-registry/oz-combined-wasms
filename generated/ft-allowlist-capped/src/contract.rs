@@ -28,14 +28,14 @@ impl Contract {
         set_cap(e, cap);
         AllowList::allow_user(e, &admin);
         if initial_supply > 0 {
-            check_cap(e, initial_supply);
+            check_cap(e, initial_supply, Base::total_supply(e));
             Base::mint(e, &admin, initial_supply);
         }
     }
 
     #[only_admin]
     pub fn mint(e: &Env, to: Address, amount: i128) {
-        check_cap(e, amount);
+        check_cap(e, amount, Base::total_supply(e));
         Base::mint(e, &to, amount);
     }
 }

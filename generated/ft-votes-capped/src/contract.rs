@@ -27,7 +27,7 @@ impl Contract {
 
     #[only_owner]
     pub fn mint(e: &Env, to: &Address, amount: i128) {
-        check_cap(e, amount);
+        check_cap(e, amount, Base::total_supply(e));
         FungibleVotes::mint(e, to, amount);
     }
 }

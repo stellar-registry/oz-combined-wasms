@@ -27,14 +27,14 @@ impl Contract {
         access_control::grant_role_no_auth(e, &manager, &symbol_short!("manager"), &admin);
         set_cap(e, cap);
         if initial_supply > 0 {
-            check_cap(e, initial_supply);
+            check_cap(e, initial_supply, Base::total_supply(e));
             Base::mint(e, &admin, initial_supply);
         }
     }
 
     #[only_admin]
     pub fn mint(e: &Env, to: Address, amount: i128) {
-        check_cap(e, amount);
+        check_cap(e, amount, Base::total_supply(e));
         Base::mint(e, &to, amount);
     }
 }

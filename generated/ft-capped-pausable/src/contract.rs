@@ -25,7 +25,7 @@ impl Contract {
         set_owner(e, &owner);
         set_cap(e, cap);
         if initial_supply > 0 {
-            check_cap(e, initial_supply);
+            check_cap(e, initial_supply, Base::total_supply(e));
             Base::mint(e, &owner, initial_supply);
         }
     }
@@ -33,7 +33,7 @@ impl Contract {
     #[only_owner]
     #[when_not_paused]
     pub fn mint(e: &Env, to: Address, amount: i128) {
-        check_cap(e, amount);
+        check_cap(e, amount, Base::total_supply(e));
         Base::mint(e, &to, amount);
     }
 }
