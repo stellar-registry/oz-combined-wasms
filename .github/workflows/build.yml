@@ -40,6 +40,6 @@ jobs:
         Pre-built Soroban WASM combinations compiled against
         OpenZeppelin stellar-contracts ${{ github.ref_name }}.
       package: ${{ matrix.combination }}
-      relative_path: '["generated/${{ matrix.combination }}"]'
+      relative_path: 'generated/${{ matrix.combination }}'
     secrets:
       release_token: ${{ secrets.GITHUB_TOKEN }}
