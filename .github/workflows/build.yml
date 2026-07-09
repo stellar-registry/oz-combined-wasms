@@ -11,7 +11,8 @@ permissions:
   attestations: write
 
 jobs:
-  # Step 1: run the generator and expose the list of combination names as a matrix
+  # Step 1: read the committed generated/ directory to build the matrix.
+  # The build jobs do their own repo checkout, so they use the committed files.
   generate:
     runs-on: ubuntu-latest
     outputs:
@@ -19,24 +20,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32v1-none
-
-      - name: Run generator
-        run: cargo run
-
       - name: List combinations
         id: list
         run: |
           names=$(ls generated/ | grep -v README.md | jq -R . | jq -sc .)
           echo "combinations=$names" >> "$GITHUB_OUTPUT"
-
-      # Upload generated sources so build jobs can use them without re-running
-      - uses: actions/upload-artifact@v4
-        with:
-          name: generated-sources
-          path: generated/
 
   # Step 2: build each combination in parallel using soroban-build-workflow.
   # All jobs share the same release_name so their WASMs land in one release.
