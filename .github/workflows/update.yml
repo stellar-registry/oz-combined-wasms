@@ -1,0 +1,93 @@
+name: Update OZ Version
+
+# Triggered by a POST to:
+#   POST /repos/stellar-registry/oz-combined-wasms/dispatches
+#   { "event_type": "oz-release", "client_payload": { "version": "0.7.3" } }
+#
+# The poll.yml workflow sends this dispatch automatically when it detects a new
+# stellar-tokens version on crates.io. You can also trigger it manually from
+# the Actions tab (workflow_dispatch below) or via the GitHub API.
+
+on:
+  repository_dispatch:
+    types: [oz-release]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'OZ stellar-contracts version (e.g. 0.7.3)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "version=${{ github.event.client_payload.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+
+      - name: Bump OZ strict pins in Cargo.toml
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          # Update all "=x.y.z" pins (only stellar-* packages use this format)
+          sed -i "s/\"=[0-9]\+\.[0-9]\+\.[0-9]\+\"/\"=$VERSION\"/g" Cargo.toml
+          # Update workspace.package version to match
+          sed -i '/\[workspace\.package\]/,/^\[/ s/^version = ".*"/version = "'"$VERSION"'"/' Cargo.toml
+
+      - name: Regenerate combinations
+        run: cargo run
+
+      - name: Check for new OZ extensions
+        id: ext
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          git clone --depth 1 --branch "v$VERSION" \
+            https://github.com/OpenZeppelin/stellar-contracts oz-source 2>/dev/null \
+            || git clone --depth 1 https://github.com/OpenZeppelin/stellar-contracts oz-source
+
+          python3 scripts/check-extensions.py oz-source known-extensions.toml \
+            >> "$GITHUB_OUTPUT" || true
+
+      - name: Open issue for new extensions
+        if: steps.ext.outputs.new_extensions != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `New OZ extensions detected in v${{ steps.ver.outputs.version }}`,
+              body: `The following new extension directories were found in OpenZeppelin stellar-contracts v${{ steps.ver.outputs.version }}:\n\n\`\`\`\n${{ steps.ext.outputs.new_extensions }}\n\`\`\`\n\nTo handle them:\n1. Add generator support in \`src/config.rs\`, \`src/fragments/\`\n2. Add entries to \`known-extensions.toml\`\n3. Re-run \`cargo run\` and update \`generated/\``,
+              labels: ['new-extension']
+            });
+
+      - name: Open PR with updated deps and regenerated combinations
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore: update to OZ stellar-contracts v${{ steps.ver.outputs.version }}"
+          title: "Update to OZ stellar-contracts v${{ steps.ver.outputs.version }}"
+          body: |
+            Automated update triggered by a new OZ stellar-contracts release.
+
+            - Bumped all `stellar-*` dependency pins to `=${{ steps.ver.outputs.version }}`
+            - Regenerated `generated/` with `cargo run`
+
+            Please review the diff and merge when ready, then push a tag to trigger the build workflow.
+          branch: "update/oz-v${{ steps.ver.outputs.version }}"
+          delete-branch: true

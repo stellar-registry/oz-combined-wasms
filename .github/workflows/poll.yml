@@ -1,0 +1,53 @@
+name: Poll for new OZ release
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # hourly
+  workflow_dispatch:       # also triggerable manually
+
+permissions:
+  contents: read
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch latest stellar-tokens version from crates.io
+        id: latest
+        run: |
+          VERSION=$(curl -s \
+            -H "User-Agent: stellar-registry/oz-combined-wasms (CI poll)" \
+            https://crates.io/api/v1/crates/stellar-tokens/versions \
+            | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          # Exclude pre-releases; take the first non-yanked version
+          for v in data['versions']:
+              if not v['yanked'] and '-' not in v['num']:
+                  print(v['num'])
+                  break
+          ")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Read currently pinned version from Cargo.toml
+        id: current
+        run: |
+          VERSION=$(grep 'stellar-tokens' Cargo.toml \
+            | grep -oP '(?<=="=)[0-9]+\.[0-9]+\.[0-9]+')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch update if version changed
+        if: steps.latest.outputs.version != steps.current.outputs.version
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/dispatches \
+            -d '{
+              "event_type": "oz-release",
+              "client_payload": { "version": "${{ steps.latest.outputs.version }}" }
+            }'
+          echo "Dispatched oz-release for v${{ steps.latest.outputs.version }}"

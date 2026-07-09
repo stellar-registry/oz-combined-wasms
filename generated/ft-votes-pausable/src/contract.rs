@@ -1,0 +1,121 @@
+//! Pausable governance fungible token with voting, Ownable access, Burnable, and Upgradeable.
+
+use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, MuxedAddress, String};
+use stellar_access::ownable::{set_owner, Ownable};
+use stellar_contract_utils::pausable::{self as pausable, Pausable};
+use stellar_contract_utils::upgradeable::{self as upgradeable, Upgradeable};
+use stellar_macros::{only_owner, when_not_paused};
+use stellar_tokens::fungible::{burnable::FungibleBurnable, votes::FungibleVotes, Base, FungibleToken, ContractOverrides};
+use stellar_governance::votes::Votes;
+
+#[contract]
+pub struct Contract;
+
+#[contractimpl]
+impl Contract {
+    pub fn __constructor(
+        e: &Env,
+        name: String,
+        symbol: String,
+        decimals: u32,
+        owner: Address,
+    ) {
+        Base::set_metadata(e, decimals, name, symbol);
+        set_owner(e, &owner);
+    }
+
+    #[only_owner]
+    #[when_not_paused]
+    pub fn mint(e: &Env, to: &Address, amount: i128) {
+        FungibleVotes::mint(e, to, amount);
+    }
+}
+
+#[contractimpl]
+#[allow(unused_variables)]
+impl Pausable for Contract {
+    fn paused(e: &Env) -> bool {
+        pausable::paused(e)
+    }
+
+    #[only_owner]
+    fn pause(e: &Env, caller: Address) {
+        pausable::pause(e);
+    }
+
+    #[only_owner]
+    fn unpause(e: &Env, caller: Address) {
+        pausable::unpause(e);
+    }
+}
+
+#[contractimpl]
+impl FungibleToken for Contract {
+    type ContractType = FungibleVotes;
+
+    fn total_supply(e: &Env) -> i128 {
+        Self::ContractType::total_supply(e)
+    }
+
+    fn balance(e: &Env, account: Address) -> i128 {
+        Self::ContractType::balance(e, &account)
+    }
+
+    fn allowance(e: &Env, owner: Address, spender: Address) -> i128 {
+        Self::ContractType::allowance(e, &owner, &spender)
+    }
+
+    #[when_not_paused]
+    fn transfer(e: &Env, from: Address, to: MuxedAddress, amount: i128) {
+        Self::ContractType::transfer(e, &from, &to, amount);
+    }
+
+    #[when_not_paused]
+    fn transfer_from(e: &Env, spender: Address, from: Address, to: Address, amount: i128) {
+        Self::ContractType::transfer_from(e, &spender, &from, &to, amount);
+    }
+
+    fn approve(e: &Env, owner: Address, spender: Address, amount: i128, live_until_ledger: u32) {
+        Self::ContractType::approve(e, &owner, &spender, amount, live_until_ledger);
+    }
+
+    fn decimals(e: &Env) -> u32 {
+        Self::ContractType::decimals(e)
+    }
+
+    fn name(e: &Env) -> String {
+        Self::ContractType::name(e)
+    }
+
+    fn symbol(e: &Env) -> String {
+        Self::ContractType::symbol(e)
+    }
+}
+
+#[contractimpl]
+impl FungibleBurnable for Contract {
+    #[when_not_paused]
+    fn burn(e: &Env, from: Address, amount: i128) {
+        Self::ContractType::burn(e, &from, amount)
+    }
+
+    #[when_not_paused]
+    fn burn_from(e: &Env, spender: Address, from: Address, amount: i128) {
+        Self::ContractType::burn_from(e, &spender, &from, amount)
+    }
+}
+
+#[contractimpl(contracttrait)]
+impl Votes for Contract {}
+
+#[contractimpl(contracttrait)]
+impl Ownable for Contract {}
+
+#[contractimpl]
+#[allow(unused_variables)]
+impl Upgradeable for Contract {
+    #[only_owner]
+    fn upgrade(e: &Env, new_wasm_hash: BytesN<32>, operator: Address) {
+        upgradeable::upgrade(e, &new_wasm_hash);
+    }
+}

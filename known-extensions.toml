@@ -1,0 +1,11 @@
+# Extensions the generator currently knows how to handle.
+# The poll workflow diffs this against the OZ source tree and opens a GitHub
+# Issue when new extension directories appear.
+#
+# When you add a new extension to the generator, add it here too.
+
+[fungible]
+handled = ["allowlist", "blocklist", "burnable", "capped", "votes"]
+
+[non_fungible]
+handled = ["burnable", "consecutive", "enumerable", "royalties", "votes"]

@@ -1,0 +1,57 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  id-token: write
+  contents: write
+  attestations: write
+
+jobs:
+  # Step 1: run the generator and expose the list of combination names as a matrix
+  generate:
+    runs-on: ubuntu-latest
+    outputs:
+      combinations: ${{ steps.list.outputs.combinations }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+
+      - name: Run generator
+        run: cargo run
+
+      - name: List combinations
+        id: list
+        run: |
+          names=$(ls generated/ | grep -v README.md | jq -R . | jq -sc .)
+          echo "combinations=$names" >> "$GITHUB_OUTPUT"
+
+      # Upload generated sources so build jobs can use them without re-running
+      - uses: actions/upload-artifact@v4
+        with:
+          name: generated-sources
+          path: generated/
+
+  # Step 2: build each combination in parallel using soroban-build-workflow.
+  # All jobs share the same release_name so their WASMs land in one release.
+  build:
+    needs: generate
+    strategy:
+      matrix:
+        combination: ${{ fromJson(needs.generate.outputs.combinations) }}
+    uses: stellar-expert/soroban-build-workflow/.github/workflows/release.yml@main
+    with:
+      release_name: ${{ github.ref_name }}
+      release_description: >
+        Pre-built Soroban WASM combinations compiled against
+        OpenZeppelin stellar-contracts ${{ github.ref_name }}.
+      package: ${{ matrix.combination }}
+      relative_path: '["generated/${{ matrix.combination }}"]'
+    secrets:
+      release_token: ${{ secrets.GITHUB_TOKEN }}

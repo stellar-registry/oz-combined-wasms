@@ -1,0 +1,43 @@
+[workspace]
+resolver = "2"
+# Note: generated/* crates are NOT workspace members — they are standalone
+# crates with explicit dependency versions written by the generator.
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/stellar-registry/oz-combined-wasms"
+version = "0.7.2"
+
+[workspace.dependencies]
+soroban-sdk            = { version = "26.1.0", features = ["experimental_spec_shaking_v2"] }
+stellar-access         = "=0.7.2"
+stellar-contract-utils = "=0.7.2"
+stellar-governance     = "=0.7.2"
+stellar-macros         = "=0.7.2"
+stellar-tokens         = "=0.7.2"
+
+# The generator binary lives at the workspace root
+[package]
+name = "generate-combinations"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "generate-combinations"
+path = "src/main.rs"
+
+# Release profile used when building the contract WASMs
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = "symbols"
+debug-assertions = false
+panic = "abort"
+codegen-units = 1
+lto = true
+
+[profile.release-with-logs]
+inherits = "release"
+debug-assertions = true
