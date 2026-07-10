@@ -58,7 +58,8 @@ All combinations are compiled against the OZ package versions pinned in
 │   ├── README.md
 │   └── <combination>/          # One Cargo crate per combination
 ├── scripts/
-│   └── check-extensions.py    # Detects new OZ extension directories
+│   ├── check-extensions.py    # Detects new OZ extension directories
+│   └── publish.sh             # Downloads WASMs from latest release and publishes to Registry
 ├── known-extensions.toml      # Extensions the generator knows about
 └── .github/workflows/
     ├── build.yml               # Builds WASMs on tag push
@@ -115,6 +116,30 @@ After merging an update PR, push a version tag to trigger `build.yml`:
 git tag v0.7.3 && git push origin v0.7.3
 ```
 
-This builds all 31 combinations in parallel using
-[soroban-build-workflow](https://github.com/stellar-expert/soroban-build-workflow)
-and attaches the WASM files to a GitHub release.
+This builds all 31 combinations in a single job using `stellar contract build --optimize`,
+caches Cargo artifacts with `Swatinem/rust-cache`, and attaches all WASM files to one
+GitHub release. Each WASM includes `source_repo` and `home_domain` metadata and a
+build provenance attestation.
+
+## Publishing to the Stellar Registry
+
+After the GitHub release is created, publish all WASMs to the `oz` sub-registry:
+
+```bash
+# Dry-run first — prints every command without submitting
+./scripts/publish.sh
+
+# Then execute for real
+./scripts/publish.sh --execute
+```
+
+The script:
+- Downloads WASMs from the latest GitHub release into `target/wasms/<tag>/` (cached across runs)
+- Checks `stellar registry fetch-hash oz/<name>` before each publish and skips already-published WASMs
+- Runs `stellar registry publish --wasm-name oz/<name>` for each remaining WASM
+
+This makes it safe to re-run after transient failures — already-published combinations
+are skipped automatically.
+
+Config via env vars: `STELLAR_NETWORK` (default `mainnet`), `REGISTRY_ADMIN` (default `theahaco`),
+`TAG` (default: latest release), `WORK_DIR` (default: `target/wasms/<tag>/`).
