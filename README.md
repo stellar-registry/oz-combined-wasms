@@ -1,6 +1,6 @@
 # oz-combined-wasms
 
-Pre-built Soroban WASM files for every curated combination of
+Pre-built Soroban Wasm files for every curated combination of
 [OpenZeppelin Stellar Contracts](https://github.com/OpenZeppelin/stellar-contracts),
 published to the [Stellar Registry](https://rgstry.xyz).
 
@@ -59,10 +59,10 @@ All combinations are compiled against the OZ package versions pinned in
 │   └── <combination>/          # One Cargo crate per combination
 ├── scripts/
 │   ├── check-extensions.py    # Detects new OZ extension directories
-│   └── publish.sh             # Downloads WASMs from latest release and publishes to Registry
+│   └── publish.sh             # Downloads Wasms from latest release and publishes to Registry
 ├── known-extensions.toml      # Extensions the generator knows about
 └── .github/workflows/
-    ├── build.yml               # Builds WASMs on tag push
+    ├── build.yml               # Builds Wasms on tag push
     ├── update.yml              # Updates OZ versions and regenerates
     └── poll.yml                # Hourly: detects new OZ releases
 ```
