@@ -62,7 +62,7 @@ All combinations are compiled against the OZ package versions pinned in
 │   └── publish.sh             # Downloads Wasms from latest release and publishes to Registry
 ├── known-extensions.toml      # Extensions the generator knows about
 └── .github/workflows/
-    ├── build.yml               # Builds Wasms on tag push
+    ├── release.yml             # Tags on version bump, builds + attests, publishes to Registry
     ├── update.yml              # Updates OZ versions and regenerates
     └── poll.yml                # Hourly: detects new OZ releases
 ```
@@ -108,22 +108,48 @@ curl -X POST \
   -d '{"event_type":"oz-release","client_payload":{"version":"0.7.3"}}'
 ```
 
-## Releasing
+## Releasing & publishing
 
-After merging an update PR, push a version tag to trigger `build.yml`:
+**Merging the update PR is the release.** On every push to `main`,
+`release.yml` (built from the reusable
+[stellar-registry/actions](https://github.com/stellar-registry/actions)
+workflows) runs the whole chain in one workflow run:
 
-```bash
-git tag v0.7.3 && git push origin v0.7.3
-```
+1. **detect-releases** — if `[workspace.package].version` has no matching
+   `v<version>` tag yet (i.e. the merged PR bumped it), tag it. Pure git — no
+   manual `git tag` step.
+2. **build** — compile all 31 combinations in a single job with
+   `stellar contract build`, attach every WASM to one GitHub release, submit
+   hashes to stellar.expert contract validation, and sign a build provenance
+   attestation for each. Each WASM carries `source_repo` and `home_domain`
+   metadata.
+3. **publish** — verify each asset's attestation, then publish each to the
+   `oz/` sub-registry with `stellar-registry publish`, skipping combinations
+   already on-chain (same hash) and refusing a same-version different-hash
+   asset. A `registry-publish-receipts.json` is attached to the release.
 
-This builds all 31 combinations in a single job using `stellar contract build --optimize`,
-caches Cargo artifacts with `Swatinem/rust-cache`, and attaches all WASM files to one
-GitHub release. Each WASM includes `source_repo` and `home_domain` metadata and a
-build provenance attestation.
+Because the tag is created with `GITHUB_TOKEN` and the downstream jobs run via
+`needs:` in the same run, no GitHub App or manual tag push is involved — a
+manually pushed tag does nothing.
 
-## Publishing to the Stellar Registry
+Required repo configuration:
 
-After the GitHub release is created, publish all WASMs to the `oz` sub-registry:
+- secret `REGISTRY_PUBLISH_SECRET_KEY` — `S…` seed of the account bound as
+  author of the `oz/*` names (fee source + publish signer)
+- optional var `REGISTRY_AUTHOR_ADDRESS` — `G…` author override; unset means
+  the signing key's own account
+
+**Recovery:** if the on-chain half fails transiently, run the `Release`
+workflow manually (`workflow_dispatch`) with `publish_tag: v<version>` — it
+republishes the existing attested assets without rebuilding, skipping
+whatever already landed. If the *build* half fails, use the failed run's
+"Re-run failed jobs" (deleting the GitHub release first if one was created;
+keep the tag).
+
+### Manual fallback: `scripts/publish.sh`
+
+The publish half can still be run locally from a machine holding the admin
+key:
 
 ```bash
 # Dry-run first — prints every command without submitting
@@ -133,13 +159,10 @@ After the GitHub release is created, publish all WASMs to the `oz` sub-registry:
 ./scripts/publish.sh --execute
 ```
 
-The script:
-- Downloads WASMs from the latest GitHub release into `target/wasms/<tag>/` (cached across runs)
-- Checks `stellar registry fetch-hash oz/<name>` before each publish and skips already-published WASMs
-- Runs `stellar registry publish --wasm-name oz/<name>` for each remaining WASM
-
-This makes it safe to re-run after transient failures — already-published combinations
-are skipped automatically.
+The script downloads WASMs from the latest GitHub release into
+`target/wasms/<tag>/`, checks `stellar registry fetch-hash oz/<name>` before
+each publish, and skips already-published WASMs — safe to re-run after
+transient failures.
 
 Config via env vars: `STELLAR_NETWORK` (default `mainnet`), `REGISTRY_ADMIN` (default `theahaco`),
 `TAG` (default: latest release), `WORK_DIR` (default: `target/wasms/<tag>/`).
