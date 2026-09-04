@@ -88,6 +88,8 @@ jobs:
             - Bumped all `stellar-*` dependency pins to `=${{ steps.ver.outputs.version }}`
             - Regenerated `generated/` with `cargo run`
 
-            Please review the diff and merge when ready, then push a tag to trigger the build workflow.
+            Please review the diff and merge when ready — merging IS the release:
+            `release.yml` tags `v${{ steps.ver.outputs.version }}`, builds + attests all
+            combinations, and publishes them to the `oz/` sub-registry automatically.
           branch: "update/oz-v${{ steps.ver.outputs.version }}"
           delete-branch: true
