@@ -46,6 +46,13 @@ Registry and deploy it.
 All combinations are compiled against the OZ package versions pinned in
 `Cargo.toml` (`[workspace.dependencies]`).
 
+### Looking for `nft-sequential-minting`?
+
+Use `nft-standard`. It is the equivalent of OpenZeppelin's
+[`nft-sequential-minting`](https://github.com/OpenZeppelin/stellar-contracts/tree/main/examples/nft-sequential-minting)
+example: the same `Base::sequential_mint` and Burnable, with the example's
+hand-rolled owner storage replaced by Ownable, plus Upgradeable.
+
 ## Repository structure
 
 ```
