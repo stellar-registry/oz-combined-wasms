@@ -5,7 +5,7 @@ use stellar_access::access_control::{self as access_control, AccessControl};
 use stellar_contract_utils::pausable::{self as pausable, Pausable};
 use stellar_contract_utils::upgradeable::{self as upgradeable, Upgradeable};
 use stellar_macros::{only_admin, only_role, when_not_paused};
-use stellar_tokens::fungible::{burnable::FungibleBurnable, allowlist::{AllowList, FungibleAllowList}, ContractOverrides, Base, FungibleToken};
+use stellar_tokens::fungible::{burnable::FungibleBurnable, allowlist::{AllowList, FungibleAllowList}, total_supply::{FungibleTotalSupply, TotalSupply}, Base, Compose, ContractOverrides, FungibleToken};
 
 #[contract]
 pub struct Contract;
@@ -25,13 +25,13 @@ impl Contract {
         access_control::set_admin(e, &admin);
         access_control::grant_role_no_auth(e, &manager, &symbol_short!("manager"), &admin);
         AllowList::allow_user(e, &admin);
-        Base::mint(e, &admin, initial_supply);
+        <Self as FungibleToken>::ContractType::mint(e, &admin, initial_supply);
     }
 
     #[only_admin]
     #[when_not_paused]
     pub fn mint(e: &Env, to: Address, amount: i128) {
-        Base::mint(e, &to, amount);
+        <Self as FungibleToken>::ContractType::mint(e, &to, amount);
     }
 }
 
@@ -55,11 +55,7 @@ impl Pausable for Contract {
 
 #[contractimpl]
 impl FungibleToken for Contract {
-    type ContractType = AllowList;
-
-    fn total_supply(e: &Env) -> i128 {
-        Self::ContractType::total_supply(e)
-    }
+    type ContractType = Compose<(AllowList, TotalSupply)>;
 
     fn balance(e: &Env, account: Address) -> i128 {
         Self::ContractType::balance(e, &account)
@@ -108,6 +104,9 @@ impl FungibleBurnable for Contract {
         Self::ContractType::burn_from(e, &spender, &from, amount)
     }
 }
+
+#[contractimpl(contracttrait)]
+impl FungibleTotalSupply for Contract {}
 
 #[contractimpl(contracttrait)]
 impl FungibleAllowList for Contract {

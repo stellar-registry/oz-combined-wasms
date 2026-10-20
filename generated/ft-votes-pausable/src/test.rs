@@ -16,7 +16,7 @@ fn initial_state() {
     let e = Env::default();
     let owner = Address::generate(&e);
     let client = create_client(&e, &owner);
-    assert_eq!(client.total_supply(), 0);
+    assert_eq!(client.get_total_supply(), 0);
     assert_eq!(client.symbol(), String::from_str(&e, "TST"));
     assert_eq!(client.name(), String::from_str(&e, "Test Token"));
     assert_eq!(client.decimals(), 18);
@@ -44,7 +44,7 @@ fn mint_works() {
     e.mock_all_auths();
     client.mint(&owner, &1000);
     client.mint(&owner, &500);
-    assert_eq!(client.total_supply(), 1500);
+    assert_eq!(client.get_total_supply(), 1500);
 }
 
 #[test]
@@ -55,7 +55,7 @@ fn burn_works() {
     e.mock_all_auths();
     client.mint(&owner, &1000);
     client.burn(&owner, &200);
-    assert_eq!(client.total_supply(), 800);
+    assert_eq!(client.get_total_supply(), 800);
     assert_eq!(client.balance(&owner), 800);
 }
 

@@ -4,7 +4,7 @@ use soroban_sdk::{contract, contractimpl, symbol_short, Address, BytesN, Env, St
 use stellar_access::access_control::{self as access_control, AccessControl};
 use stellar_contract_utils::upgradeable::{self as upgradeable, Upgradeable};
 use stellar_macros::{only_admin, only_role};
-use stellar_tokens::non_fungible::{burnable::NonFungibleBurnable, royalties::NonFungibleRoyalties, Base, NonFungibleToken};
+use stellar_tokens::non_fungible::{burnable::NonFungibleBurnable, royalties::{NonFungibleRoyalties, Royalties, RoyaltySupport}, Base, Compose, NonFungibleToken};
 
 #[contract]
 pub struct Contract;
@@ -28,13 +28,13 @@ impl Contract {
 
     #[only_admin]
     pub fn mint(e: &Env, to: Address) -> u32 {
-        Base::sequential_mint(e, &to)
+        <Self as NonFungibleToken>::ContractType::mint(e, &to)
     }
 }
 
 #[contractimpl(contracttrait)]
 impl NonFungibleToken for Contract {
-    type ContractType = Base;
+    type ContractType = Compose<(Base, Royalties)>;
 }
 
 #[contractimpl(contracttrait)]
@@ -49,12 +49,12 @@ impl NonFungibleRoyalties for Contract {
 
     #[only_role(operator, "manager")]
     fn set_token_royalty(e: &Env, token_id: u32, receiver: Address, basis_points: u32, operator: Address) {
-        Base::set_token_royalty(e, token_id, &receiver, basis_points);
+        Self::ContractType::set_token_royalty(e, token_id, &receiver, basis_points);
     }
 
     #[only_role(operator, "manager")]
     fn remove_token_royalty(e: &Env, token_id: u32, operator: Address) {
-        Base::remove_token_royalty(e, token_id);
+        Self::ContractType::remove_token_royalty(e, token_id);
     }
 }
 

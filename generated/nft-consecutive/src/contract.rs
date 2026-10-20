@@ -4,7 +4,7 @@ use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, String};
 use stellar_access::ownable::{set_owner, Ownable};
 use stellar_contract_utils::upgradeable::{self as upgradeable, Upgradeable};
 use stellar_macros::{only_owner};
-use stellar_tokens::non_fungible::{burnable::NonFungibleBurnable, consecutive::{Consecutive, NonFungibleConsecutive}, Base, NonFungibleToken};
+use stellar_tokens::non_fungible::{burnable::NonFungibleBurnable, consecutive::{Consecutive, NonFungibleConsecutive}, Base, Compose, NonFungibleToken};
 
 #[contract]
 pub struct Contract;
@@ -24,13 +24,13 @@ impl Contract {
 
     #[only_owner]
     pub fn batch_mint(e: &Env, to: Address, amount: u32) -> u32 {
-        Consecutive::batch_mint(e, &to, amount)
+        <Self as NonFungibleToken>::ContractType::mint_range(e, &to, amount)
     }
 }
 
 #[contractimpl(contracttrait)]
 impl NonFungibleToken for Contract {
-    type ContractType = Consecutive;
+    type ContractType = Compose<(Consecutive,)>;
 }
 
 #[contractimpl(contracttrait)]

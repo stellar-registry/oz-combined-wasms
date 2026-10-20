@@ -1,4 +1,5 @@
 use crate::config::*;
+use crate::fragments::fungible::tracks_total_supply;
 
 pub fn gen_imports(cfg: &CombinationConfig) -> String {
     let mut out = String::new();
@@ -67,51 +68,43 @@ fn gen_fungible_imports(out: &mut String, cfg: &CombinationConfig, ft: FungibleT
     }
 
     // Token imports
+    let mut token_items = Vec::new();
+    if ft != FungibleType::Vault {
+        token_items.push("burnable::FungibleBurnable");
+    }
+    if cfg.has(Feature::Capped) {
+        if tracks_total_supply(ft) {
+            token_items.push("capped::{Capped, FungibleCapped}");
+        } else {
+            token_items.push("capped::{check_cap, set_cap}");
+        }
+    }
     match ft {
-        FungibleType::Base | FungibleType::AllowList | FungibleType::BlockList => {
-            let mut token_items = vec!["burnable::FungibleBurnable"];
-            if cfg.has(Feature::Capped) {
-                token_items.push("capped::{check_cap, set_cap}");
-            }
-            match ft {
-                FungibleType::AllowList => {
-                    token_items.push("allowlist::{AllowList, FungibleAllowList}");
-                }
-                FungibleType::BlockList => {
-                    token_items.push("blocklist::{BlockList, FungibleBlockList}");
-                }
-                _ => {}
-            }
-            // ContractOverrides needed for manual delegation when Pausable + non-Base type
-            if cfg.has(Feature::Pausable) && ft != FungibleType::Base {
-                token_items.push("ContractOverrides");
-            }
-            token_items.push("Base");
-            token_items.push("FungibleToken");
-            out.push_str(&format!(
-                "use stellar_tokens::fungible::{{{items}}};\n",
-                items = token_items.join(", ")
-            ));
+        FungibleType::AllowList => token_items.push("allowlist::{AllowList, FungibleAllowList}"),
+        FungibleType::BlockList => token_items.push("blocklist::{BlockList, FungibleBlockList}"),
+        FungibleType::Votes => token_items.push("votes::FungibleVotes"),
+        _ => {}
+    }
+    if tracks_total_supply(ft) {
+        token_items.push("total_supply::{FungibleTotalSupply, TotalSupply}");
+    }
+    token_items.extend_from_slice(&["Base", "Compose"]);
+    // Manual delegation calls the ContractType's trait methods directly
+    if cfg.has(Feature::Pausable) {
+        token_items.push("ContractOverrides");
+    }
+    token_items.push("FungibleToken");
+    out.push_str(&format!(
+        "use stellar_tokens::fungible::{{{items}}};\n",
+        items = token_items.join(", ")
+    ));
+    match ft {
+        FungibleType::Votes if cfg.has(Feature::Capped) => {
+            out.push_str("use stellar_governance::votes::{get_total_supply, Votes};\n");
         }
-        FungibleType::Votes => {
-            let mut token_items =
-                vec!["burnable::FungibleBurnable", "votes::FungibleVotes", "Base", "FungibleToken"];
-            if cfg.has(Feature::Capped) {
-                token_items.insert(0, "capped::{check_cap, set_cap}");
-            }
-            if cfg.has(Feature::Pausable) {
-                token_items.push("ContractOverrides");
-            }
-            out.push_str(&format!(
-                "use stellar_tokens::fungible::{{{items}}};\n",
-                items = token_items.join(", ")
-            ));
-            out.push_str("use stellar_governance::votes::Votes;\n");
-        }
-        FungibleType::Vault => {
-            out.push_str("use stellar_tokens::fungible::{Base, FungibleToken};\n");
-            out.push_str("use stellar_tokens::vault::{FungibleVault, Vault};\n");
-        }
+        FungibleType::Votes => out.push_str("use stellar_governance::votes::Votes;\n"),
+        FungibleType::Vault => out.push_str("use stellar_tokens::vault::{FungibleVault, Vault};\n"),
+        _ => {}
     }
 }
 
@@ -170,39 +163,27 @@ fn gen_nft_imports(out: &mut String, cfg: &CombinationConfig, nt: NftType) {
     }
 
     // Token imports
+    let mut nft_items = vec!["burnable::NonFungibleBurnable"];
     match nt {
-        NftType::Votes => {
-            // Votes always needs manual delegation (like pausable for other types)
-            out.push_str(
-                "use stellar_tokens::non_fungible::{burnable::NonFungibleBurnable, votes::NonFungibleVotes, Base, NonFungibleToken};\n",
-            );
-            out.push_str("use stellar_governance::votes::Votes;\n");
-        }
-        _ => {
-            let mut nft_items = vec!["burnable::NonFungibleBurnable"];
-            match nt {
-                NftType::Base => {}
-                NftType::Enumerable => {
-                    nft_items.push("enumerable::{Enumerable, NonFungibleEnumerable}");
-                }
-                NftType::Consecutive => {
-                    nft_items.push("consecutive::{Consecutive, NonFungibleConsecutive}");
-                }
-                NftType::Votes => unreachable!(),
-            }
-            if cfg.has(Feature::Royalties) {
-                nft_items.push("royalties::NonFungibleRoyalties");
-            }
-            // ContractOverrides needed for manual delegation when Pausable + non-Base type
-            if cfg.has(Feature::Pausable) && nt != NftType::Base {
-                nft_items.push("ContractOverrides");
-            }
-            nft_items.push("Base");
-            nft_items.push("NonFungibleToken");
-            out.push_str(&format!(
-                "use stellar_tokens::non_fungible::{{{items}}};\n",
-                items = nft_items.join(", ")
-            ));
-        }
+        NftType::Base => {}
+        NftType::Enumerable => nft_items.push("enumerable::{Enumerable, NonFungibleEnumerable}"),
+        NftType::Consecutive => nft_items.push("consecutive::{Consecutive, NonFungibleConsecutive}"),
+        NftType::Votes => nft_items.push("votes::NonFungibleVotes"),
+    }
+    if cfg.has(Feature::Royalties) {
+        nft_items.push("royalties::{NonFungibleRoyalties, Royalties, RoyaltySupport}");
+    }
+    nft_items.extend_from_slice(&["Base", "Compose"]);
+    // Manual delegation calls the ContractType's trait methods directly; Base has them inherently
+    if cfg.has(Feature::Pausable) && nt != NftType::Base {
+        nft_items.push("ContractOverrides");
+    }
+    nft_items.push("NonFungibleToken");
+    out.push_str(&format!(
+        "use stellar_tokens::non_fungible::{{{items}}};\n",
+        items = nft_items.join(", ")
+    ));
+    if nt == NftType::Votes {
+        out.push_str("use stellar_governance::votes::Votes;\n");
     }
 }

@@ -5,7 +5,7 @@
 # When you add a new extension to the generator, add it here too.
 
 [fungible]
-handled = ["allowlist", "blocklist", "burnable", "capped", "votes"]
+handled = ["allowlist", "blocklist", "burnable", "capped", "combinations", "total_supply", "votes"]
 
 [non_fungible]
-handled = ["burnable", "consecutive", "enumerable", "royalties", "votes"]
+handled = ["burnable", "combinations", "consecutive", "enumerable", "royalties", "votes"]

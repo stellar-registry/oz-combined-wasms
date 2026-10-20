@@ -5,7 +5,7 @@ use stellar_access::ownable::{set_owner, Ownable};
 use stellar_contract_utils::pausable::{self as pausable, Pausable};
 use stellar_contract_utils::upgradeable::{self as upgradeable, Upgradeable};
 use stellar_macros::{only_owner, when_not_paused};
-use stellar_tokens::non_fungible::{burnable::NonFungibleBurnable, votes::NonFungibleVotes, Base, NonFungibleToken};
+use stellar_tokens::non_fungible::{burnable::NonFungibleBurnable, votes::NonFungibleVotes, Base, Compose, ContractOverrides, NonFungibleToken};
 use stellar_governance::votes::Votes;
 
 #[contract]
@@ -27,7 +27,7 @@ impl Contract {
     #[only_owner]
     #[when_not_paused]
     pub fn mint(e: &Env, to: Address) -> u32 {
-        NonFungibleVotes::sequential_mint(e, &to)
+        <Self as NonFungibleToken>::ContractType::mint(e, &to)
     }
 }
 
@@ -51,52 +51,52 @@ impl Pausable for Contract {
 
 #[contractimpl]
 impl NonFungibleToken for Contract {
-    type ContractType = Base;
+    type ContractType = Compose<(NonFungibleVotes,)>;
 
     fn balance(e: &Env, owner: Address) -> u32 {
-        Base::balance(e, &owner)
+        Self::ContractType::balance(e, &owner)
     }
 
     fn owner_of(e: &Env, token_id: u32) -> Address {
-        Base::owner_of(e, token_id)
+        Self::ContractType::owner_of(e, token_id)
     }
 
     #[when_not_paused]
     fn transfer(e: &Env, from: Address, to: Address, token_id: u32) {
-        NonFungibleVotes::transfer(e, &from, &to, token_id);
+        Self::ContractType::transfer(e, &from, &to, token_id);
     }
 
     #[when_not_paused]
     fn transfer_from(e: &Env, spender: Address, from: Address, to: Address, token_id: u32) {
-        NonFungibleVotes::transfer_from(e, &spender, &from, &to, token_id);
+        Self::ContractType::transfer_from(e, &spender, &from, &to, token_id);
     }
 
     fn approve(e: &Env, approver: Address, approved: Address, token_id: u32, live_until_ledger: u32) {
-        Base::approve(e, &approver, &approved, token_id, live_until_ledger);
+        Self::ContractType::approve(e, &approver, &approved, token_id, live_until_ledger);
     }
 
     fn approve_for_all(e: &Env, owner: Address, operator: Address, live_until_ledger: u32) {
-        Base::approve_for_all(e, &owner, &operator, live_until_ledger);
+        Self::ContractType::approve_for_all(e, &owner, &operator, live_until_ledger);
     }
 
     fn get_approved(e: &Env, token_id: u32) -> Option<Address> {
-        Base::get_approved(e, token_id)
+        Self::ContractType::get_approved(e, token_id)
     }
 
     fn is_approved_for_all(e: &Env, owner: Address, operator: Address) -> bool {
-        Base::is_approved_for_all(e, &owner, &operator)
+        Self::ContractType::is_approved_for_all(e, &owner, &operator)
     }
 
     fn name(e: &Env) -> String {
-        Base::name(e)
+        Self::ContractType::name(e)
     }
 
     fn symbol(e: &Env) -> String {
-        Base::symbol(e)
+        Self::ContractType::symbol(e)
     }
 
     fn token_uri(e: &Env, token_id: u32) -> String {
-        Base::token_uri(e, token_id)
+        Self::ContractType::token_uri(e, token_id)
     }
 }
 
@@ -104,12 +104,12 @@ impl NonFungibleToken for Contract {
 impl NonFungibleBurnable for Contract {
     #[when_not_paused]
     fn burn(e: &Env, from: Address, token_id: u32) {
-        NonFungibleVotes::burn(e, &from, token_id);
+        Self::ContractType::burn(e, &from, token_id)
     }
 
     #[when_not_paused]
     fn burn_from(e: &Env, spender: Address, from: Address, token_id: u32) {
-        NonFungibleVotes::burn_from(e, &spender, &from, token_id);
+        Self::ContractType::burn_from(e, &spender, &from, token_id)
     }
 }
 

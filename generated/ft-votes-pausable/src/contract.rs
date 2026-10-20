@@ -5,7 +5,7 @@ use stellar_access::ownable::{set_owner, Ownable};
 use stellar_contract_utils::pausable::{self as pausable, Pausable};
 use stellar_contract_utils::upgradeable::{self as upgradeable, Upgradeable};
 use stellar_macros::{only_owner, when_not_paused};
-use stellar_tokens::fungible::{burnable::FungibleBurnable, votes::FungibleVotes, Base, FungibleToken, ContractOverrides};
+use stellar_tokens::fungible::{burnable::FungibleBurnable, votes::FungibleVotes, Base, Compose, ContractOverrides, FungibleToken};
 use stellar_governance::votes::Votes;
 
 #[contract]
@@ -27,7 +27,7 @@ impl Contract {
     #[only_owner]
     #[when_not_paused]
     pub fn mint(e: &Env, to: &Address, amount: i128) {
-        FungibleVotes::mint(e, to, amount);
+        <Self as FungibleToken>::ContractType::mint(e, to, amount);
     }
 }
 
@@ -51,11 +51,7 @@ impl Pausable for Contract {
 
 #[contractimpl]
 impl FungibleToken for Contract {
-    type ContractType = FungibleVotes;
-
-    fn total_supply(e: &Env) -> i128 {
-        Self::ContractType::total_supply(e)
-    }
+    type ContractType = Compose<(FungibleVotes,)>;
 
     fn balance(e: &Env, account: Address) -> i128 {
         Self::ContractType::balance(e, &account)

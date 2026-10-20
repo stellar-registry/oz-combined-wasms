@@ -4,7 +4,7 @@ use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, MuxedAddress, St
 use stellar_access::ownable::{set_owner, Ownable};
 use stellar_contract_utils::upgradeable::{self as upgradeable, Upgradeable};
 use stellar_macros::{only_owner};
-use stellar_tokens::fungible::{burnable::FungibleBurnable, capped::{check_cap, set_cap}, Base, FungibleToken};
+use stellar_tokens::fungible::{burnable::FungibleBurnable, capped::{Capped, FungibleCapped}, total_supply::{FungibleTotalSupply, TotalSupply}, Base, Compose, FungibleToken};
 
 #[contract]
 pub struct Contract;
@@ -22,27 +22,29 @@ impl Contract {
     ) {
         Base::set_metadata(e, decimals, name, symbol);
         set_owner(e, &owner);
-        set_cap(e, cap);
-        if initial_supply > 0 {
-            check_cap(e, initial_supply, Base::total_supply(e));
-            Base::mint(e, &owner, initial_supply);
-        }
+        Capped::set_cap(e, cap);
+        <Self as FungibleToken>::ContractType::mint(e, &owner, initial_supply);
     }
 
     #[only_owner]
     pub fn mint(e: &Env, to: Address, amount: i128) {
-        check_cap(e, amount, Base::total_supply(e));
-        Base::mint(e, &to, amount);
+        <Self as FungibleToken>::ContractType::mint(e, &to, amount);
     }
 }
 
 #[contractimpl(contracttrait)]
 impl FungibleToken for Contract {
-    type ContractType = Base;
+    type ContractType = Compose<(Capped, TotalSupply)>;
 }
 
 #[contractimpl(contracttrait)]
 impl FungibleBurnable for Contract {}
+
+#[contractimpl(contracttrait)]
+impl FungibleTotalSupply for Contract {}
+
+#[contractimpl(contracttrait)]
+impl FungibleCapped for Contract {}
 
 #[contractimpl(contracttrait)]
 impl Ownable for Contract {}

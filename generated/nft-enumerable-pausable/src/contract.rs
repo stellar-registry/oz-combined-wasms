@@ -5,7 +5,7 @@ use stellar_access::ownable::{set_owner, Ownable};
 use stellar_contract_utils::pausable::{self as pausable, Pausable};
 use stellar_contract_utils::upgradeable::{self as upgradeable, Upgradeable};
 use stellar_macros::{only_owner, when_not_paused};
-use stellar_tokens::non_fungible::{burnable::NonFungibleBurnable, enumerable::{Enumerable, NonFungibleEnumerable}, ContractOverrides, Base, NonFungibleToken};
+use stellar_tokens::non_fungible::{burnable::NonFungibleBurnable, enumerable::{Enumerable, NonFungibleEnumerable}, Base, Compose, ContractOverrides, NonFungibleToken};
 
 #[contract]
 pub struct Contract;
@@ -26,7 +26,7 @@ impl Contract {
     #[only_owner]
     #[when_not_paused]
     pub fn mint(e: &Env, to: Address) -> u32 {
-        Enumerable::sequential_mint(e, &to)
+        <Self as NonFungibleToken>::ContractType::mint(e, &to)
     }
 }
 
@@ -50,7 +50,7 @@ impl Pausable for Contract {
 
 #[contractimpl]
 impl NonFungibleToken for Contract {
-    type ContractType = Enumerable;
+    type ContractType = Compose<(Enumerable,)>;
 
     fn balance(e: &Env, owner: Address) -> u32 {
         Self::ContractType::balance(e, &owner)
