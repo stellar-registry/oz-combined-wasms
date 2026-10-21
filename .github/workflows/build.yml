@@ -38,10 +38,10 @@ jobs:
       # Cache ~/.cargo/registry and target/ — first run cold, subsequent runs fast
       - uses: Swatinem/rust-cache@v2
 
-      # v26.0.0: Protocol 26 support, spec shaking, --optimize is now the default
+      # v28.1.0: soroban-sdk 28 requires stellar-cli 25.2+ to build
       - uses: stellar/stellar-cli@v28.1.0
         with:
-          version: '26.0.0'
+          version: '28.1.0'
 
       - name: Resolve release name
         id: release
