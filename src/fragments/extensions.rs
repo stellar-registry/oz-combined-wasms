@@ -60,14 +60,14 @@ pub fn gen_extension_impls(cfg: &CombinationConfig) -> String {
                 out.push_str("    #[only_role(operator, \"manager\")]\n");
                 out.push_str("    fn set_token_royalty(e: &Env, token_id: u32, receiver: Address, basis_points: u32, operator: Address) {\n");
                 out.push_str(
-                    "        Base::set_token_royalty(e, token_id, &receiver, basis_points);\n",
+                    "        Self::ContractType::set_token_royalty(e, token_id, &receiver, basis_points);\n",
                 );
                 out.push_str("    }\n\n");
                 out.push_str("    #[only_role(operator, \"manager\")]\n");
                 out.push_str(
                     "    fn remove_token_royalty(e: &Env, token_id: u32, operator: Address) {\n",
                 );
-                out.push_str("        Base::remove_token_royalty(e, token_id);\n");
+                out.push_str("        Self::ContractType::remove_token_royalty(e, token_id);\n");
                 out.push_str("    }\n");
                 out.push_str("}\n\n");
             }

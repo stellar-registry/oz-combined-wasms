@@ -39,7 +39,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       # v26.0.0: Protocol 26 support, spec shaking, --optimize is now the default
-      - uses: stellar/stellar-cli@v26.0.0
+      - uses: stellar/stellar-cli@v28.1.0
         with:
           version: '26.0.0'
 

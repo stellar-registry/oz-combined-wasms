@@ -4,7 +4,7 @@ use soroban_sdk::{contract, contractimpl, symbol_short, Address, BytesN, Env, Mu
 use stellar_access::access_control::{self as access_control, AccessControl};
 use stellar_contract_utils::upgradeable::{self as upgradeable, Upgradeable};
 use stellar_macros::{only_admin, only_role};
-use stellar_tokens::fungible::{burnable::FungibleBurnable, blocklist::{BlockList, FungibleBlockList}, Base, FungibleToken};
+use stellar_tokens::fungible::{burnable::FungibleBurnable, blocklist::{BlockList, FungibleBlockList}, total_supply::{FungibleTotalSupply, TotalSupply}, Base, Compose, FungibleToken};
 
 #[contract]
 pub struct Contract;
@@ -23,22 +23,25 @@ impl Contract {
         Base::set_metadata(e, decimals, name, symbol);
         access_control::set_admin(e, &admin);
         access_control::grant_role_no_auth(e, &manager, &symbol_short!("manager"), &admin);
-        Base::mint(e, &admin, initial_supply);
+        <Self as FungibleToken>::ContractType::mint(e, &admin, initial_supply);
     }
 
     #[only_admin]
     pub fn mint(e: &Env, to: Address, amount: i128) {
-        Base::mint(e, &to, amount);
+        <Self as FungibleToken>::ContractType::mint(e, &to, amount);
     }
 }
 
 #[contractimpl(contracttrait)]
 impl FungibleToken for Contract {
-    type ContractType = BlockList;
+    type ContractType = Compose<(BlockList, TotalSupply)>;
 }
 
 #[contractimpl(contracttrait)]
 impl FungibleBurnable for Contract {}
+
+#[contractimpl(contracttrait)]
+impl FungibleTotalSupply for Contract {}
 
 #[contractimpl(contracttrait)]
 impl FungibleBlockList for Contract {

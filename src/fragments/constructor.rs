@@ -64,7 +64,11 @@ fn gen_fungible_constructor(cfg: &CombinationConfig, ft: FungibleType) -> String
     }
 
     if cfg.has(Feature::Capped) {
-        out.push_str("        set_cap(e, cap);\n");
+        if ft == FungibleType::Votes {
+            out.push_str("        set_cap(e, cap);\n");
+        } else {
+            out.push_str("        Capped::set_cap(e, cap);\n");
+        }
     }
 
     // AllowList: allow admin before minting
@@ -75,15 +79,9 @@ fn gen_fungible_constructor(cfg: &CombinationConfig, ft: FungibleType) -> String
     // Mint initial supply
     if ft != FungibleType::Votes {
         let mint_to = if cfg.is_ownable() { "owner" } else { "admin" };
-        if cfg.has(Feature::Capped) {
-            out.push_str(&format!(
-                "        if initial_supply > 0 {{\n            check_cap(e, initial_supply, Base::total_supply(e));\n            Base::mint(e, &{mint_to}, initial_supply);\n        }}\n"
-            ));
-        } else {
-            out.push_str(&format!(
-                "        Base::mint(e, &{mint_to}, initial_supply);\n"
-            ));
-        }
+        out.push_str(&format!(
+            "        <Self as FungibleToken>::ContractType::mint(e, &{mint_to}, initial_supply);\n"
+        ));
     }
 
     out.push_str("    }\n\n");
@@ -111,17 +109,14 @@ fn gen_fungible_mint(out: &mut String, cfg: &CombinationConfig, ft: FungibleType
         FungibleType::Votes => {
             out.push_str("    pub fn mint(e: &Env, to: &Address, amount: i128) {\n");
             if cfg.has(Feature::Capped) {
-                out.push_str("        check_cap(e, amount, Base::total_supply(e));\n");
+                out.push_str("        check_cap(e, amount, get_total_supply(e) as i128);\n");
             }
-            out.push_str("        FungibleVotes::mint(e, to, amount);\n");
+            out.push_str("        <Self as FungibleToken>::ContractType::mint(e, to, amount);\n");
             out.push_str("    }\n");
         }
         _ => {
             out.push_str("    pub fn mint(e: &Env, to: Address, amount: i128) {\n");
-            if cfg.has(Feature::Capped) {
-                out.push_str("        check_cap(e, amount, Base::total_supply(e));\n");
-            }
-            out.push_str("        Base::mint(e, &to, amount);\n");
+            out.push_str("        <Self as FungibleToken>::ContractType::mint(e, &to, amount);\n");
             out.push_str("    }\n");
         }
     }
@@ -218,25 +213,14 @@ fn gen_nft_mint(out: &mut String, cfg: &CombinationConfig, nt: NftType) {
     }
 
     match nt {
-        NftType::Base | NftType::Enumerable => {
-            let minter = match nt {
-                NftType::Base => "Base",
-                NftType::Enumerable => "Enumerable",
-                _ => unreachable!(),
-            };
+        NftType::Base | NftType::Enumerable | NftType::Votes => {
             out.push_str("    pub fn mint(e: &Env, to: Address) -> u32 {\n");
-            out.push_str(&format!("        {minter}::sequential_mint(e, &to)\n"));
+            out.push_str("        <Self as NonFungibleToken>::ContractType::mint(e, &to)\n");
             out.push_str("    }\n");
         }
         NftType::Consecutive => {
             out.push_str("    pub fn batch_mint(e: &Env, to: Address, amount: u32) -> u32 {\n");
-            out.push_str("        Consecutive::batch_mint(e, &to, amount)\n");
-            out.push_str("    }\n");
-        }
-        NftType::Votes => {
-            // Use NonFungibleVotes::sequential_mint to update voting units on mint
-            out.push_str("    pub fn mint(e: &Env, to: Address) -> u32 {\n");
-            out.push_str("        NonFungibleVotes::sequential_mint(e, &to)\n");
+            out.push_str("        <Self as NonFungibleToken>::ContractType::mint_range(e, &to, amount)\n");
             out.push_str("    }\n");
         }
     }

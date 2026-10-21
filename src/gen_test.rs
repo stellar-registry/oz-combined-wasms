@@ -1,4 +1,14 @@
 use crate::config::*;
+use crate::fragments::fungible::tracks_total_supply;
+
+/// Votes tokens report supply through their voting checkpoints.
+fn supply_fn(cfg: &CombinationConfig) -> &'static str {
+    if tracks_total_supply(cfg.fungible_type().unwrap()) {
+        "total_supply"
+    } else {
+        "get_total_supply"
+    }
+}
 
 pub fn generate_test(cfg: &CombinationConfig) -> String {
     match cfg.variant {
@@ -106,10 +116,10 @@ fn gen_ft_initial_state(out: &mut String, cfg: &CombinationConfig, ft: FungibleT
             out.push_str("    let owner = Address::generate(&e);\n");
             if ft == FungibleType::Votes {
                 out.push_str("    let client = create_client(&e, &owner);\n");
-                out.push_str("    assert_eq!(client.total_supply(), 0);\n");
+                out.push_str(&format!("    assert_eq!(client.{}(), 0);\n", supply_fn(cfg)));
             } else {
                 out.push_str("    let client = create_client(&e, &owner, 1000);\n");
-                out.push_str("    assert_eq!(client.total_supply(), 1000);\n");
+                out.push_str(&format!("    assert_eq!(client.{}(), 1000);\n", supply_fn(cfg)));
                 out.push_str("    assert_eq!(client.balance(&owner), 1000);\n");
             }
         }
@@ -117,7 +127,7 @@ fn gen_ft_initial_state(out: &mut String, cfg: &CombinationConfig, ft: FungibleT
             out.push_str("    let admin = Address::generate(&e);\n");
             out.push_str("    let manager = Address::generate(&e);\n");
             out.push_str("    let client = create_client(&e, &admin, &manager, 1000);\n");
-            out.push_str("    assert_eq!(client.total_supply(), 1000);\n");
+            out.push_str(&format!("    assert_eq!(client.{}(), 1000);\n", supply_fn(cfg)));
             out.push_str("    assert_eq!(client.balance(&admin), 1000);\n");
         }
     }
@@ -190,7 +200,7 @@ fn gen_ft_mint_works(out: &mut String, cfg: &CombinationConfig, ft: FungibleType
     out.push_str("    let e = Env::default();\n");
     out.push_str(&setup);
     out.push_str(&format!("    client.mint(&{holder}, &500);\n"));
-    out.push_str("    assert_eq!(client.total_supply(), 1500);\n");
+    out.push_str(&format!("    assert_eq!(client.{}(), 1500);\n", supply_fn(cfg)));
     out.push_str("}\n\n");
 }
 
@@ -203,7 +213,7 @@ fn gen_ft_burn_works(out: &mut String, cfg: &CombinationConfig) {
     out.push_str("    let e = Env::default();\n");
     out.push_str(&setup);
     out.push_str(&format!("    client.burn(&{holder}, &200);\n"));
-    out.push_str("    assert_eq!(client.total_supply(), 800);\n");
+    out.push_str(&format!("    assert_eq!(client.{}(), 800);\n", supply_fn(cfg)));
     out.push_str(&format!("    assert_eq!(client.balance(&{holder}), 800);\n"));
     out.push_str("}\n\n");
 }

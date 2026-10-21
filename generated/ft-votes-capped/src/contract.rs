@@ -4,8 +4,8 @@ use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, MuxedAddress, St
 use stellar_access::ownable::{set_owner, Ownable};
 use stellar_contract_utils::upgradeable::{self as upgradeable, Upgradeable};
 use stellar_macros::{only_owner};
-use stellar_tokens::fungible::{capped::{check_cap, set_cap}, burnable::FungibleBurnable, votes::FungibleVotes, Base, FungibleToken};
-use stellar_governance::votes::Votes;
+use stellar_tokens::fungible::{burnable::FungibleBurnable, capped::{check_cap, set_cap}, votes::FungibleVotes, Base, Compose, FungibleToken};
+use stellar_governance::votes::{get_total_supply, Votes};
 
 #[contract]
 pub struct Contract;
@@ -27,14 +27,14 @@ impl Contract {
 
     #[only_owner]
     pub fn mint(e: &Env, to: &Address, amount: i128) {
-        check_cap(e, amount, Base::total_supply(e));
-        FungibleVotes::mint(e, to, amount);
+        check_cap(e, amount, get_total_supply(e) as i128);
+        <Self as FungibleToken>::ContractType::mint(e, to, amount);
     }
 }
 
 #[contractimpl(contracttrait)]
 impl FungibleToken for Contract {
-    type ContractType = FungibleVotes;
+    type ContractType = Compose<(FungibleVotes,)>;
 }
 
 #[contractimpl(contracttrait)]
